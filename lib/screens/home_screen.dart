@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/product.dart';
-import '../services/api_service.dart';
+import '../models/product_provider.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -8,42 +9,73 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Product Gallery')),
-      body: FutureBuilder<List<Product>>(
-        future: ApiService.fetchProducts(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+      appBar: AppBar(
+        title: const Text('Product Gallery'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              final productProvider = Provider.of<ProductProvider>(context, listen: false);
+              productProvider.refreshProducts();
+            },
+          ),
+        ],
+      ),
+      body: Consumer<ProductProvider>(
+        builder: (context, productProvider, _) {
+          if (productProvider.isLoading) {
             return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          } else if (productProvider.error.isNotEmpty) {
+            return Center(child: Text('Error: ${productProvider.error}'));
+          } else if (productProvider.products.isEmpty) {
             return const Center(child: Text('No products found.'));
           }
 
-          final products = snapshot.data!;
           return GridView.builder(
             padding: const EdgeInsets.all(8),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2, childAspectRatio: 0.7, crossAxisSpacing: 8, mainAxisSpacing: 8,
+              crossAxisCount: 2,
+              childAspectRatio: 0.7,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
             ),
-            itemCount: products.length,
+            itemCount: productProvider.products.length,
             itemBuilder: (context, index) {
-              final product = products[index];
-              return Card(
-                elevation: 4,
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: Image.network(product.image, fit: BoxFit.cover),
+              final product = productProvider.products[index];
+            return Card(
+              elevation: 4,
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Image.network(
+                      product.image,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => 
+                          const Icon(Icons.error, color: Colors.red),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text(product.title, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(
+                      product.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
                     ),
-                    Text('₹${product.price}', style: const TextStyle(color: Colors.green)),
-                  ],
-                ),
-              );
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Text(
+                      '₹${product.price}',
+                      style: const TextStyle(
+                        color: Colors.green,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
             },
           );
         },
