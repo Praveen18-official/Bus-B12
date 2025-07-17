@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:get/get.dart';
+import '../controllers/home_controller.dart';
 import '../models/product.dart';
-import '../models/product_provider.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  HomeScreen({super.key});
+  
+  final HomeController controller = Get.put(HomeController());
 
   @override
   Widget build(BuildContext context) {
@@ -14,34 +16,30 @@ class HomeScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () {
-              final productProvider = Provider.of<ProductProvider>(context, listen: false);
-              productProvider.refreshProducts();
-            },
+            onPressed: controller.refreshProducts,
           ),
         ],
       ),
-      body: Consumer<ProductProvider>(
-        builder: (context, productProvider, _) {
-          if (productProvider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (productProvider.error.isNotEmpty) {
-            return Center(child: Text('Error: ${productProvider.error}'));
-          } else if (productProvider.products.isEmpty) {
-            return const Center(child: Text('No products found.'));
-          }
+      body: Obx(() {
+        if (controller.isLoading.value) {
+          return const Center(child: CircularProgressIndicator());
+        } else if (controller.error.isNotEmpty) {
+          return Center(child: Text('Error: ${controller.error}'));
+        } else if (controller.productList.isEmpty) {
+          return const Center(child: Text('No products found.'));
+        }
 
-          return GridView.builder(
-            padding: const EdgeInsets.all(8),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 0.7,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-            ),
-            itemCount: productProvider.products.length,
-            itemBuilder: (context, index) {
-              final product = productProvider.products[index];
+        return GridView.builder(
+          padding: const EdgeInsets.all(8),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 0.7,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+          ),
+          itemCount: controller.productList.length,
+          itemBuilder: (context, index) {
+            final product = controller.productList[index];
             return Card(
               elevation: 4,
               child: Column(
@@ -76,10 +74,9 @@ class HomeScreen extends StatelessWidget {
                 ],
               ),
             );
-            },
-          );
-        },
-      ),
+          },
+        );
+      }),
     );
   }
 }
